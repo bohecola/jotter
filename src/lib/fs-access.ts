@@ -638,7 +638,8 @@ export async function measureTree(
       }
       files += 1
       if (files > limits.maxFiles) {
-        throw new AppError('err.fs.treeTooManyFiles', { max: limits.maxFiles })
+        // 复数键按 count 变形，max 保留给文案本身用
+        throw new AppError('err.fs.treeTooManyFiles', { count: limits.maxFiles, max: limits.maxFiles })
       }
       bytes += (await handle.getFile()).size
       if (bytes > limits.maxBytes) {

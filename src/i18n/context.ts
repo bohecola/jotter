@@ -4,25 +4,18 @@
   为什么不和 <I18nProvider> 放在一个文件里：eslint 的
   react-refresh/only-export-components 不允许「组件 + 非组件」同文件导出，
   eslint.config.js 已经为 src/theme/index.tsx 破过一次例（注释里写明是历史遗留），
-  新代码不该再加一条。所以 .tsx 里只留组件，hook / 字典 / 工具函数都在这个 .ts 里，
+  新代码不该再加一条。所以 .tsx 里只留组件，工具函数都在这个 .ts 里，
   规则本来就不管它。组件里写 `import { useI18n } from '@/i18n/context'`。
+
+  文案本体在 src/locales/*.json（i18next JSON v4），由 setup.ts 驱动；
+  这里只保留对外 API（useI18n / messageOf / translate / LANGS / T）。
 */
 import { createContext, useContext } from 'react'
 
-import { AppError, type Problem } from '@/lib/app-error'
-import { langFromTag, type Lang } from './langs'
+import type { TFunction } from 'i18next'
 
-import { en } from './dict.en'
-import { fr } from './dict.fr'
-import { de } from './dict.de'
-import { it } from './dict.it'
-import { ko } from './dict.ko'
-import { ja } from './dict.ja'
-import { vi } from './dict.vi'
-import { pt } from './dict.pt'
-import { ar } from './dict.ar'
-import { zhHant } from './dict.zhHant'
-import { zh, type Dict } from './dict.zh'
+import { AppError, type Problem } from '@/lib/app-error'
+import { langFromTag, LANG_TAGS, type Lang } from './langs'
 
 /**
  * 真正生效的语言（不含 system）：
@@ -36,42 +29,14 @@ export type { Lang }
 /** 用户的选择：明确指定，或跟随系统 —— 与 ThemeMode 同构 */
 export type LangMode = Lang | 'system'
 
-const DICTS: Record<Lang, Dict> = {
-  zh,
-  zhHant,
-  en,
-  fr,
-  de,
-  it,
-  ko,
-  ja,
-  vi,
-  pt,
-  ar,
-}
-
 /*
   与 index.html 首帧脚本里的键名一致，改这里要一起改那边。
   主题那支键还是历史遗留的 'playground-theme'，新键跟 jotter:* 一族对齐。
 */
 export const STORAGE_KEY = 'jotter:lang'
 
-/*
-  「这条文案该不该传参」交给 tsc 管：字典里的值是函数就必须传它那个参数对象，
-  是字符串就一个参数都不许多传。忘写 { count } 是编译错误，不是运行时 undefined。
-*/
-type Args<K extends keyof Dict> = Dict[K] extends (p: infer P) => string ? [P] : []
-export type T = <K extends keyof Dict>(key: K, ...args: Args<K>) => string
-
-export function createT(lang: Lang): T {
-  const dict = DICTS[lang]
-  return (key, ...args) => {
-    // 泛型索引访问下 typeof 收窄不可靠，先落成 unknown 再手动分派
-    const value: unknown = dict[key]
-    if (typeof value === 'function') return (value as (p: unknown) => string)(args[0])
-    return value as string
-  }
-}
+/** react-i18next 给的 t，键名受 i18next.d.ts 的 CustomTypeOptions 约束。 */
+export type T = TFunction<'translation'>
 
 /** 浏览器语言：按 navigator.language 就近归到我们支持的语言，认不出回英文。 */
 export function systemLang(): Lang {
@@ -84,7 +49,8 @@ export function readLangMode(): LangMode {
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
     // hasOwn 而不是 in：localStorage 里若被写成 'toString' 这种原型链上的名字，in 会放行
-    if (saved !== null && (saved === 'system' || Object.hasOwn(DICTS, saved))) return saved as LangMode
+    if (saved !== null && (saved === 'system' || Object.hasOwn(LANG_TAGS, saved)))
+      return saved as LangMode
   } catch {
     // 隐私模式下 localStorage 直接抛，按默认走
   }
@@ -156,5 +122,10 @@ export function messageOf(err: unknown, t: T): string {
  */
 export function translate(problem: Problem, t: T): string {
   const raw = t as unknown as (key: string, params?: unknown) => string
-  return raw(problem.key, problem.params)
+  const params = problem.params
+  // err.fs.nameTaken 的 kind 参数兼任 i18next 的 context（选 _file / _directory 变体）
+  if (params && typeof params === 'object' && 'kind' in params) {
+    return raw(problem.key, { ...params, context: params.kind })
+  }
+  return raw(problem.key, params)
 }

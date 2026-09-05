@@ -24,7 +24,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn } from '@/lib/utils'
 import { isMac } from '@/lib/platform'
 import { useI18n, LANGS, type LangMode } from '@/i18n/context'
-import type { Dict } from '@/i18n/dict.zh.ts'
+import type { ParseKeys } from 'i18next'
 import { useTheme, type Accent, type ThemeMode, ACCENTS } from '@/theme/index'
 import {
   useSettings,
@@ -45,7 +45,7 @@ import { AUTO_THEME, EDITOR_THEMES } from '@/monaco/themes'
 
 type Tab = 'appearance' | 'editor' | 'shortcuts'
 
-const TABS: { id: Tab; icon: string; labelKey: keyof Dict }[] = [
+const TABS: { id: Tab; icon: string; labelKey: ParseKeys }[] = [
   { id: 'appearance', icon: 'icon-[lucide--palette]', labelKey: 'settings.appearance' },
   { id: 'editor', icon: 'icon-[lucide--code]', labelKey: 'settings.editor' },
   { id: 'shortcuts', icon: 'icon-[lucide--keyboard]', labelKey: 'settings.shortcuts' },
@@ -73,7 +73,7 @@ const K = isMac
   : { mod: 'Ctrl', alt: 'Alt', shift: 'Shift', enter: 'Enter', up: '↑', down: '↓' }
 
 interface ShortcutRow {
-  labelKey: keyof Dict
+  labelKey: ParseKeys
   combos: string[][]
 }
 

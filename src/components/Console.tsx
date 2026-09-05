@@ -1,5 +1,6 @@
 import { memo, useEffect, useRef, useState, useImperativeHandle, forwardRef, type CSSProperties } from 'react'
 import { useI18n } from '@/i18n/context'
+import { LANG_TAGS } from '@/i18n/langs'
 import { codeRunner, type RawConsoleMessage } from '@/lib/runner'
 import type { ConsoleMessage, LogLevel } from '../types'
 import Inspector from './Inspector'
@@ -103,8 +104,8 @@ const LogRow = memo(function LogRow({ log, locale }: { log: ConsoleMessage; loca
 })
 
 export default forwardRef<ConsoleHandle>(function Console(_props, ref) {
-  const { t } = useI18n()
-  const locale = t('locale.bcp47')
+  const { t, lang } = useI18n()
+  const locale = LANG_TAGS[lang]
   const [{ logs, omitted }, setState] = useState<LogState>(EMPTY)
   const idRef = useRef(0)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -181,7 +182,7 @@ export default forwardRef<ConsoleHandle>(function Console(_props, ref) {
         <>
           {omitted > 0 && (
             <div className="border-b border-[var(--border)]/60 py-0.5 text-[var(--text-faint)]">
-              … {t('console.omitted', omitted)}
+              … {t('console.omitted', { count: omitted })}
             </div>
           )}
           {logs.map((log) => (

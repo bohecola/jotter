@@ -1,6 +1,7 @@
-import type { Dict } from '@/i18n/dict.zh'
+import type { ParseKeys } from 'i18next'
 
-export type DictKey = keyof Dict
+/** i18next 资源里的一条键名（en.json 的键，复数键写基名即可）。 */
+export type DictKey = ParseKeys
 
 /**
  * 「一条待翻译的文案」的描述符：不抛出、而是作为返回值往上传的那些提示用它。

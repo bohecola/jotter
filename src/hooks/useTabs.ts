@@ -158,10 +158,8 @@ export function useTabs({ editorRef, confirm, t, onEmpty }: UseTabsOptions) {
       const dirtyCount = targets.filter((x) => dirtyRef.current.has(x.key)).length
       if (dirtyCount > 0) {
         const ok = await confirm.ask({
-          title:
-            dirtyCount === 1
-              ? t('confirm.closeMany.one')
-              : t('confirm.closeMany.many', { count: dirtyCount }),
+          // 复数键 confirm.closeMany.title：单复数由 count 经 CLDR 规则选择
+          title: t('confirm.closeMany.title', { count: dirtyCount }),
           lines: [t('confirm.closeMany.unsaved')],
           confirmText: t('confirm.closeTab.ok'),
           tone: 'danger',

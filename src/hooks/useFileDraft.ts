@@ -208,7 +208,8 @@ export function useFileDraft(
         title: t('confirm.renameDir.title', { from: target.name, to: name }),
         lines: [
           t('confirm.renameDir.how'),
-          t('confirm.renameDir.size', { files: size.files, size: formatSize(size.bytes) }),
+          // 复数文案：数量走 count，files 保留给文案本身用
+          t('confirm.renameDir.size', { count: size.files, files: size.files, size: formatSize(size.bytes) }),
           t('confirm.renameDir.risk'),
         ],
         confirmText: t('confirm.renameDir.ok'),

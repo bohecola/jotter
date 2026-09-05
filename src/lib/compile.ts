@@ -6,7 +6,12 @@
 import { monaco, modelUri } from '@/monaco/setup'
 import { AppError } from './app-error'
 import { stripExports } from './strip-exports'
-import type { CompileIssue } from '@/i18n/dict.zh'
+
+/** 一条编译错误。位置的写法（「第 N 行第 M 列」）由译文决定，这里只传数字。 */
+export interface CompileIssue {
+  text: string
+  loc: { line: number; column: number } | null
+}
 
 /** 把语法诊断整理成一条待翻译的错误；位置从 0 基偏移换成行列 */
 function compileError(model: monaco.editor.ITextModel, diagnostics: monaco.typescript.Diagnostic[]): AppError {

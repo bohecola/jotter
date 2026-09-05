@@ -1,5 +1,5 @@
 /*
-  语言的 Provider。这个文件里只有组件 —— 类型、hook、字典都在 context.ts / dict.*.ts，
+  语言的 Provider。这个文件里只有组件 —— 类型、hook、工具函数都在 context.ts，
   原因见 context.ts 顶部的注释。
 
   形状与 src/theme/index.tsx 完全同构（三态、写 localStorage、首帧由 index.html 兜住），
@@ -7,7 +7,11 @@
 */
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 
-import { I18nContext, STORAGE_KEY, createT, dirOf, readLangMode, systemLang, type LangMode } from './context'
+import { useTranslation } from 'react-i18next'
+
+import { LANG_TAGS } from './langs'
+import { i18n, loadLang } from './setup'
+import { I18nContext, STORAGE_KEY, dirOf, readLangMode, systemLang, type LangMode } from './context'
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<LangMode>(readLangMode)
@@ -31,10 +35,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const lang = mode === 'system' ? sysLang : mode
 
   /*
-    t 必须按 lang 记忆：下游 hook 会把它放进 useCallback / useEffect 的依赖里，
-    每次渲染都换一个新函数会连锁重建所有回调（最直接的后果是目录被反复重读）。
+    t 来自 useTranslation()：语言切换后 react-i18next 会给它一个新引用，
+    下游 hook 把它放进 useCallback / useEffect 依赖里的老机制照旧生效。
   */
-  const t = useMemo(() => createT(lang), [lang])
+  const { t } = useTranslation()
 
   // 持久化用户选择
   useEffect(() => {
@@ -45,13 +49,29 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     }
   }, [mode])
 
+  // 语言的 JSON 资源是懒加载的：切换时先补齐资源包，再让 i18next 换语言
+  useEffect(() => {
+    let cancelled = false
+    loadLang(lang)
+      .then(() => {
+        if (!cancelled) i18n.changeLanguage(LANG_TAGS[lang])
+      })
+      .catch((err: unknown) => {
+        // 语言 chunk 加载失败：界面停在上一种语言，至少留个痕迹
+        console.error('[i18n] failed to load language', LANG_TAGS[lang], err)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [lang])
+
   /*
     <html lang>、标题与排版方向。运行期只由这里写，别处不要碰 document.title。
     排版方向（阿拉伯语 rtl）也要写回 <html dir>，CSS 没有跟着语言走的内置规则。
     首帧那一下由 index.html 的内联脚本负责（否则英文用户每次打开都会先闪一帧中文标题）。
   */
   useEffect(() => {
-    document.documentElement.lang = t('html.lang')
+    document.documentElement.lang = LANG_TAGS[lang]
     document.documentElement.dir = dirOf(lang)
     document.title = t('html.title')
   }, [t, lang])

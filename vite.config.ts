@@ -1,19 +1,9 @@
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { LANG_TAGS, ALL_LANGS } from './src/i18n/langs.ts'
-import { zh } from './src/i18n/dict.zh.ts'
-import { zhHant } from './src/i18n/dict.zhHant.ts'
-import { en } from './src/i18n/dict.en.ts'
-import { fr } from './src/i18n/dict.fr.ts'
-import { de } from './src/i18n/dict.de.ts'
-import { it } from './src/i18n/dict.it.ts'
-import { ko } from './src/i18n/dict.ko.ts'
-import { ja } from './src/i18n/dict.ja.ts'
-import { vi } from './src/i18n/dict.vi.ts'
-import { pt } from './src/i18n/dict.pt.ts'
-import { ar } from './src/i18n/dict.ar.ts'
 
 const here = import.meta.dirname
 const monacoVs = resolve(here, 'node_modules/monaco-editor/esm/vs')
@@ -22,11 +12,17 @@ const monacoVs = resolve(here, 'node_modules/monaco-editor/esm/vs')
   把语言表注进 index.html 的首帧脚本。
   那段脚本在 React 挂载前决定 <html lang> / dir / 标题，拿不到模块，
   以前是手抄一份语言列表和两种语言的标题；现在从 src/i18n 里那一张表生成，
-  加语言只改 langs.ts 和字典。
+  加语言只改 langs.ts 和 locales 下的 JSON。
 */
 function injectLangTable(): Plugin {
-  const dicts = { zh, zhHant, en, fr, de, it, ko, ja, vi, pt, ar }
-  const titles = Object.fromEntries(ALL_LANGS.map((lang) => [LANG_TAGS[lang], dicts[lang]['html.title']]))
+  // locales/ 里 html.title 没有插值，读文件比把它打进构建图更省事（构建图归 setup.ts 管）
+  const titles = Object.fromEntries(
+    ALL_LANGS.map((lang) => {
+      const tag = LANG_TAGS[lang]
+      const json = JSON.parse(readFileSync(resolve(here, `src/locales/${tag}.json`), 'utf8'))
+      return [tag, json['html.title']]
+    }),
+  )
   return {
     name: 'jotter:inject-lang-table',
     transformIndexHtml(html) {
