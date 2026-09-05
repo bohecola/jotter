@@ -1,11 +1,12 @@
 /*
-  编辑器设置：字号、字体、编辑器主题、换行 / 小地图 / 行号 / 连字。
+  编辑器设置：字号、字体、编辑器主题、换行 / 缩略图 / 行号 / 连字，以及文件图标主题。
   类型、常量、hook 都在这里；Provider 在 index.tsx（和 i18n 一样拆开，满足 react-refresh 的
   「组件文件只导出组件」）。明暗 / 配色 / 语言仍各自归 ThemeProvider / I18nProvider 管，
   设置面板只是把它们的入口收到一处。
 */
 import { createContext, useContext } from 'react'
 import { AUTO_THEME, isEditorTheme } from '@/monaco/themes'
+import { DEFAULT_ICON_THEME, isIconTheme, type IconThemeId } from '@/icon-themes'
 
 /** 字体预设。id 存进 localStorage；family 是交给 Monaco 的 font-family 串，带兜底。 */
 export const FONT_PRESETS = [
@@ -29,6 +30,10 @@ export interface EditorSettings {
   lineNumbers: boolean
   /** 'auto' 跟随界面明暗；否则是 monaco/themes.ts 里的主题 id */
   editorTheme: string
+  /** 目录树 / 标签栏的文件图标主题，见 icon-themes/ */
+  iconTheme: IconThemeId
+  /** 标签栏里也显示文件图标 */
+  tabIcons: boolean
 }
 
 export const FONT_SIZE_MIN = 10
@@ -42,6 +47,8 @@ export const DEFAULT_SETTINGS: EditorSettings = {
   minimap: false,
   lineNumbers: true,
   editorTheme: AUTO_THEME,
+  iconTheme: DEFAULT_ICON_THEME,
+  tabIcons: true,
 }
 
 export const STORAGE_KEY = 'jotter:editor'
@@ -72,6 +79,8 @@ export function readSettings(): EditorSettings {
       minimap: bool(v.minimap, DEFAULT_SETTINGS.minimap),
       lineNumbers: bool(v.lineNumbers, DEFAULT_SETTINGS.lineNumbers),
       editorTheme: isEditorTheme(v.editorTheme) ? v.editorTheme : DEFAULT_SETTINGS.editorTheme,
+      iconTheme: isIconTheme(v.iconTheme) ? v.iconTheme : DEFAULT_SETTINGS.iconTheme,
+      tabIcons: bool(v.tabIcons, DEFAULT_SETTINGS.tabIcons),
     }
   } catch {
     return DEFAULT_SETTINGS

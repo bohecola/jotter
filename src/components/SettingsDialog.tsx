@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState, type ReactNode, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Icon } from '@/components/ui/icon'
 import {
@@ -34,6 +34,8 @@ import {
   DEFAULT_SETTINGS,
   type EditorSettings,
 } from '@/settings/context'
+import { FileIcon } from '@/components/FileIcon'
+import { ICON_THEMES, getIconSet, type IconThemeId } from '@/icon-themes'
 import { AUTO_THEME, EDITOR_THEMES } from '@/monaco/themes'
 
 /*
@@ -251,9 +253,13 @@ export function SettingsDialog() {
   const { mode, setMode, accent, setAccent } = useTheme()
   const { settings, update, reset } = useSettings()
   const [tab, setTab] = useState<Tab>('appearance')
+  // 「文件图标」下拉里每项都有预览，提前把各主题的图标集拉下来，打开下拉时不会先闪一下占位图标
+  useEffect(() => {
+    for (const th of ICON_THEMES) getIconSet(th.id)
+  }, [])
 
   const toggle = (
-    key: keyof Pick<EditorSettings, 'wordWrap' | 'minimap' | 'lineNumbers' | 'fontLigatures'>
+    key: keyof Pick<EditorSettings, 'wordWrap' | 'minimap' | 'lineNumbers' | 'fontLigatures' | 'tabIcons'>
   ) => (
     <Switch
       checked={settings[key]}
@@ -430,6 +436,35 @@ export function SettingsDialog() {
                         </SelectContent>
                       </Select>
                     </Row>
+                    <Row label={t('settings.iconTheme')}>
+                      <Select
+                        value={settings.iconTheme}
+                        onValueChange={(v) => update('iconTheme', v as IconThemeId)}
+                      >
+                        <SelectTrigger
+                          size="sm"
+                          className="w-44"
+                          aria-label={t('settings.iconTheme')}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent position="popper">
+                          {ICON_THEMES.map((th) => (
+                            <SelectItem key={th.id} value={th.id}>
+                              {/* 每项前面画几个代表性的图标当预览：目录、ts、js、package.json */}
+                              <span className="flex items-center gap-0.5 [&_[data-slot=icon]]:size-4">
+                                <FileIcon theme={th.id} kind="directory" name="src" />
+                                <FileIcon theme={th.id} kind="file" name="index.ts" />
+                                <FileIcon theme={th.id} kind="file" name="app.js" />
+                                <FileIcon theme={th.id} kind="file" name="package.json" />
+                              </span>
+                              {th.id === 'minimal' ? t('settings.iconTheme.minimal') : th.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </Row>
+                    <Row label={t('settings.tabIcons')}>{toggle('tabIcons')}</Row>
                   </Group>
                 </>
               )}

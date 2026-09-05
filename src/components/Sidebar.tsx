@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { clamp, groupBy, map } from 'lodash-es'
 import { Button } from '@/components/ui/button'
 import { Icon } from '@/components/ui/icon'
+import { FileIcon } from '@/components/FileIcon'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -56,11 +57,11 @@ const DEFAULT_WIDTH = 264
 const REFRESH_SPIN_MS = 500
 
 /**
- * 每层缩进的宽度，刻意等于「图标 + 图标后的间距」（size-3.5 = 14px，gap-1.5 = 6px）：
- * 这样子项的图标正好落在父项名字的起点上，箭头不会戳到上一层的名字前面去。
- * 改图标尺寸或行内 gap 时这个数要跟着改，三者是一组。
+ * 每层缩进的宽度。每一行都是「箭头列 + 图标 + 名字」三段（文件行的箭头列留空，同 VS Code），
+ * 子项整体相对父项右移这么多。VS Code 默认 8px；这里是等宽字体、行内又多一列图标，
+ * 取 12px 层级更容易看清，又不至于把最窄 180px 的侧栏吃光。
  */
-const INDENT = 20
+const INDENT = 12
 
 /** 一行的左内边距。根目录行是 depth 0，它下面的第一层是 1。 */
 const padOf = (depth: number) => 8 + depth * INDENT
@@ -79,6 +80,9 @@ const rootSelId = (id: string) => `root:${id}`
  * 图标就只按自身高度参与外层那个 items-center，两边中线才真正对齐。
  */
 const ICON_SLOT = 'flex shrink-0 items-center text-[var(--text-muted)] [&>[data-slot=icon]]:size-3.5'
+/** 箭头列：目录行放展开 / 收起箭头，文件行留空占位，让图标和名字在同一层里对齐 */
+const TWISTIE_SLOT =
+  'flex size-3.5 shrink-0 items-center justify-center text-[var(--text-muted)] [&>[data-slot=icon]]:size-3.5'
 
 /**
  * 平滑推进的进度条。
@@ -169,6 +173,8 @@ interface RowProps extends React.ComponentProps<'button'> {
   /** 命中忽略名单的目录、以及非文本文件：显示为淡色，但照样可点 */
   dimmed?: boolean
   icon: React.ReactNode
+  /** 箭头列的内容（目录行的展开 / 收起箭头）；文件行不传，留空占位 */
+  twistie?: React.ReactNode
 }
 
 /** 缩进走 padding 而不是嵌套 margin，hover 背景才能铺满整行。 */
@@ -180,6 +186,7 @@ function Row({
   selected,
   dimmed,
   icon,
+  twistie,
   className,
   style,
   ...rest
@@ -209,6 +216,7 @@ function Row({
       )}
       {...rest}
     >
+      <span className={TWISTIE_SLOT}>{twistie}</span>
       <span className={ICON_SLOT}>{icon}</span>
       <span className="truncate font-mono">{label}</span>
       {dirty && (
@@ -306,14 +314,12 @@ function DraftRow({ depth, draft, value }: { depth: number; draft: FileDraft; va
         style={{ paddingLeft: padOf(depth) }}
         className="flex w-full items-center gap-1.5 py-1 pr-2"
       >
+        <span className={TWISTIE_SLOT}>
+          {value.kind === 'directory' && <Icon className="icon-[lucide--chevron-right]" />}
+        </span>
+        {/* 图标跟着输入的名字变（同 VS Code）：敲完后缀就能看到它会是什么文件 */}
         <span className={ICON_SLOT}>
-          {value.kind === 'file' ? (
-            <Icon className="icon-[lucide--file-code-2]" />
-          ) : renaming ? (
-            <Icon className="icon-[lucide--chevron-right]" />
-          ) : (
-            <Icon className="icon-[lucide--folder-plus]" />
-          )}
+          <FileIcon kind={value.kind} name={value.name} />
         </span>
         <input
           // 输入框是点击「新建」/「重命名」后当场出现的，焦点必须跟过来，
@@ -447,7 +453,7 @@ function RootRow({
         style={{ paddingLeft: padOf(0) }}
         className="relative flex min-w-0 flex-1 items-center gap-1.5 py-1 pr-1 text-left text-[13px]"
       >
-        <span className={ICON_SLOT}>
+        <span className={TWISTIE_SLOT}>
           {locked ? (
             <Icon className="icon-[lucide--lock]" />
           ) : open ? (
@@ -455,6 +461,9 @@ function RootRow({
           ) : (
             <Icon className="icon-[lucide--chevron-right]" />
           )}
+        </span>
+        <span className={ICON_SLOT}>
+          <FileIcon kind="directory" root name={root.name} expanded={open && !locked} />
         </span>
         <span
           className={cn(
@@ -607,13 +616,14 @@ function Tree({
               aria-expanded={open}
               dimmed={entry.ignored}
               selected={selectedId === dirSelId(entry.path)}
-              icon={
+              twistie={
                 open ? (
                   <Icon className="icon-[lucide--chevron-down]" />
                 ) : (
                   <Icon className="icon-[lucide--chevron-right]" />
                 )
               }
+              icon={<FileIcon kind="directory" name={entry.name} expanded={open} />}
               // 一次点击同时做两件事：展开/收起，并把它设为新建目标 + 全局选中。
               // 不拆成「点箭头展开、点名字选中」——这条侧栏最窄只有 180px，
               // 两个命中区挤在一起只会点错。
@@ -663,13 +673,7 @@ function Tree({
             dirty={dirtyKeys.has(key)}
             // 认不出后缀的文件点开会被拒（可能是二进制），先在视觉上说明它不一样
             dimmed={language === null}
-            icon={
-              language === null ? (
-                <Icon className="icon-[lucide--file-text]" />
-              ) : (
-                <Icon className="icon-[lucide--file-code-2]" />
-              )
-            }
+            icon={<FileIcon kind="file" name={entry.name} language={language} />}
             onClick={() => {
               onOpenFile(entry)
               onSelect(key)
@@ -1291,7 +1295,9 @@ export default function Sidebar({
                         label={item.label}
                         selected={selectedId === key}
                         dirty={dirtyKeys.has(key)}
-                        icon={<Icon className="icon-[lucide--file-code-2]" />}
+                        icon={
+                          <FileIcon kind="file" name={item.path.slice(item.path.lastIndexOf('/') + 1)} />
+                        }
                         onClick={() => {
                           onOpenTemplate(item.path)
                           setSelectedId(key)

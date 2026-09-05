@@ -12,6 +12,8 @@ import { useI18n } from '@/i18n/context'
 import { startPointerDrag } from '@/lib/pointer-drag'
 import { isRtl, shortcut } from '@/lib/platform'
 import type { ActiveFile } from '@/types'
+import { FileIcon } from '@/components/FileIcon'
+import { useSettings } from '@/settings/context'
 
 // Blink 下 RTL 溢出容器的 scrollLeft 是负区间 [-max, 0]（0=起点/最右，-max=尽头/最左），
 // LTR 才是 [0, max]。把它归一成「0=起点、1=尽头」的进度，避免各处各自猜符号。
@@ -54,6 +56,7 @@ export function TabStrip({
   onCloseAll,
 }: TabStripProps) {
   const { t } = useI18n()
+  const { settings } = useSettings()
   // ---- 标签栏横向滚动（同 VS Code：原生滚动条隐藏、不占高度，用悬浮细条替代）----
   const tabScrollRef = useRef<HTMLDivElement | null>(null)
   /** 悬浮进度条几何：x/w 是 thumb 相对 track 的 inline-start 的距离/宽（px）。x 是「距起点」，
@@ -198,6 +201,9 @@ export function TabStrip({
                     : 'text-[var(--text-muted)] hover:text-[var(--text-body)]'
                 )}
               >
+                {settings.tabIcons && (
+                  <FileIcon kind="file" name={tab.name} language={tab.language} className="size-3.5" />
+                )}
                 <span className="max-w-[140px] truncate">{tabName}</span>
                 {dirtyTab && (
                   <span

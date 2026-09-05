@@ -9,6 +9,7 @@
     "build": "tsc -p tsconfig.node.json && tsc && vite build",
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0 && node scripts/check-locales.mjs",
     "i18n:check": "node scripts/check-locales.mjs",
+    "icons:build": "node --experimental-strip-types scripts/build-icon-themes.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -27,7 +28,10 @@
     "@eslint/js": "^10.0.1",
     "@iconify-json/codicon": "^1.2.71",
     "@iconify-json/lucide": "^1.2.127",
+    "@iconify-json/material-icon-theme": "^1.2.70",
+    "@iconify-json/vscode-icons": "^1.2.76",
     "@iconify/tailwind4": "^1.2.3",
+    "@iconify/utils": "^3.1.5",
     "@tailwindcss/vite": "^4.3.3",
     "@types/lodash-es": "^4.17.12",
     "@types/node": "^26.2.0",
